@@ -2,7 +2,9 @@ const {
     Client,
     GatewayIntentBits,
     PermissionsBitField
-} = require('discord.js');
+} = require("discord.js");
+
+const fs = require("fs");
 
 const client = new Client({
     intents: [
@@ -13,64 +15,76 @@ const client = new Client({
     ]
 });
 
-const TOKEN = 'TU_TOKE_AQUI';
+const TOKEN = process.env.TOKEN;
 
-const config = {
+const configFile = "./config.json";
+
+let config = {
     welcomeChannel: null,
     goodbyeChannel: null
 };
 
-client.once('ready', () => {
-    console.log(`${client.user.tag} está en línea.`);
+if (fs.existsSync(configFile)) {
+    config = JSON.parse(fs.readFileSync(configFile, "utf8"));
+}
+
+function saveConfig() {
+    fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
+}
+
+client.once("ready", () => {
+    console.log(`✅ ${client.user.tag} conectado.`);
 });
 
-// Configurar canal de bienvenida
-client.on('messageCreate', async (message) => {
+client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
 
-    if (message.content.startsWith('!bienvenidas')) {
+    // Configurar canal de bienvenidas
+    if (message.content.startsWith("!bienvenidas")) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.reply('❌ Solo los administradores pueden usar este comando.');
+            return message.reply("❌ Solo administradores.");
         }
 
         const canal = message.mentions.channels.first();
 
         if (!canal) {
-            return message.reply('⚠️ Debes mencionar un canal.');
+            return message.reply("⚠️ Usa: !bienvenidas #canal");
         }
 
         config.welcomeChannel = canal.id;
+        saveConfig();
 
-        message.reply(`✅ Canal de bienvenidas configurado en ${canal}.`);
+        return message.reply(`✅ Canal de bienvenidas configurado en ${canal}`);
     }
 
-    if (message.content.startsWith('!despedidas')) {
+    // Configurar canal de despedidas
+    if (message.content.startsWith("!despedidas")) {
         if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-            return message.reply('❌ Solo los administradores pueden usar este comando.');
+            return message.reply("❌ Solo administradores.");
         }
 
         const canal = message.mentions.channels.first();
 
         if (!canal) {
-            return message.reply('⚠️ Debes mencionar un canal.');
+            return message.reply("⚠️ Usa: !despedidas #canal");
         }
 
         config.goodbyeChannel = canal.id;
+        saveConfig();
 
-        message.reply(`✅ Canal de despedidas configurado en ${canal}.`);
+        return message.reply(`✅ Canal de despedidas configurado en ${canal}`);
     }
 });
 
 // Bienvenida
-client.on('guildMemberAdd', async (member) => {
+client.on("guildMemberAdd", async (member) => {
     if (!config.welcomeChannel) return;
 
     const canal = member.guild.channels.cache.get(config.welcomeChannel);
 
     if (!canal) return;
 
-    canal.send(`
-## 👋 ¡Bienvenido ${member} 🎉
+    canal.send(`## 👋 ¡Bienvenido ${member} 🎉
 🤗 Que bien que estés aquí!
 
 ### Aquí algunas cosas que queremos que hagas:
@@ -83,12 +97,11 @@ client.on('guildMemberAdd', async (member) => {
 
 🫂 Que vivas una experiencia inolvidable ◠‿◠ 🧡!
 
-|| ${member} ||
-`);
+|| ${member} ||`);
 });
 
 // Despedida
-client.on('guildMemberRemove', async (member) => {
+client.on("guildMemberRemove", async (member) => {
     if (!config.goodbyeChannel) return;
 
     const canal = member.guild.channels.cache.get(config.goodbyeChannel);
