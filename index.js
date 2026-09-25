@@ -1,31 +1,76 @@
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const {
+    Client,
+    GatewayIntentBits,
+    PermissionsBitField
+} = require('discord.js');
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-  ]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
-// Configuración de IDs de canales
-const CANAL_BIENVENIDA_ID = 'AQUÍ_TU_ID_DE_BIENVENIDAS';
-const CANAL_DESPEDIDA_ID = 'AQUÍ_TU_ID_DE_DESPEDIDAS';
+const TOKEN = 'TU_TOKE_AQUI';
+
+const config = {
+    welcomeChannel: null,
+    goodbyeChannel: null
+};
 
 client.once('ready', () => {
-  console.log(`¡Mati Nexus Bot iniciado con éxito como ${client.user.tag}!`);
-  
-  // Establece el estado personalizado de Mati Nexus Bot
-  client.user.setActivity('Mati Nexus Bot | !hola', { type: ActivityType.Playing });
+    console.log(`${client.user.tag} está en línea.`);
 });
 
-// Mensaje de Bienvenida
-client.on('guildMemberAdd', async (member) => {
-  const canal = member.guild.channels.cache.get(CANAL_BIENVENIDA_ID);
-  if (!canal) return;
+// Configurar canal de bienvenida
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
 
-  const mensajeBienvenida = `## 👋 ¡Bienvenido ${member} 🎉
+    if (message.content.startsWith('!bienvenidas')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return message.reply('❌ Solo los administradores pueden usar este comando.');
+        }
+
+        const canal = message.mentions.channels.first();
+
+        if (!canal) {
+            return message.reply('⚠️ Debes mencionar un canal.');
+        }
+
+        config.welcomeChannel = canal.id;
+
+        message.reply(`✅ Canal de bienvenidas configurado en ${canal}.`);
+    }
+
+    if (message.content.startsWith('!despedidas')) {
+        if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return message.reply('❌ Solo los administradores pueden usar este comando.');
+        }
+
+        const canal = message.mentions.channels.first();
+
+        if (!canal) {
+            return message.reply('⚠️ Debes mencionar un canal.');
+        }
+
+        config.goodbyeChannel = canal.id;
+
+        message.reply(`✅ Canal de despedidas configurado en ${canal}.`);
+    }
+});
+
+// Bienvenida
+client.on('guildMemberAdd', async (member) => {
+    if (!config.welcomeChannel) return;
+
+    const canal = member.guild.channels.cache.get(config.welcomeChannel);
+
+    if (!canal) return;
+
+    canal.send(`
+## 👋 ¡Bienvenido ${member} 🎉
 🤗 Que bien que estés aquí!
 
 ### Aquí algunas cosas que queremos que hagas:
@@ -37,29 +82,20 @@ client.on('guildMemberAdd', async (member) => {
 🚨 Si tienes dudas o quieres reportar a un infractor crea un ticket en https://discord.com/channels/1519541546834198778/1520574884177121462 !
 
 🫂 Que vivas una experiencia inolvidable ◠‿◠ 🧡!
-|| <@1484181262058000454> ||`;
 
-  canal.send(mensajeBienvenida);
+|| ${member} ||
+`);
 });
 
-// Mensaje de Despedida
+// Despedida
 client.on('guildMemberRemove', async (member) => {
-  const canal = member.guild.channels.cache.get(CANAL_DESPEDIDA_ID);
-  if (!canal) return;
+    if (!config.goodbyeChannel) return;
 
-  const mensajeDespedida = `😭 Nuestro miembro **${member.user.tag}** nos ha dejado..`;
+    const canal = member.guild.channels.cache.get(config.goodbyeChannel);
 
-  canal.send(mensajeDespedida);
+    if (!canal) return;
+
+    canal.send(`😭 Nuestro miembro **${member.user.tag}** nos ha dejado..`);
 });
 
-// Comando de prueba
-client.on('messageCreate', (message) => {
-  if (message.author.bot) return;
-
-  if (message.content === '!hola') {
-    message.reply('¡Hola! Soy **Mati Nexus Bot** y estoy activo.');
-  }
-});
-
-client.login(process.env.DISCORD_TOKEN);
-          
+client.login(TOKEN);
